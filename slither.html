@@ -11,6 +11,7 @@
       STUFF GOES HERE ?
     </div>
 
+  <script src="discrete.js"></script>
   <script>
 
   // GAME RULE:
@@ -22,6 +23,8 @@
 
     var L = 80;
     var FOOD_HP = 10;
+    // window size
+    var W = 5;
 
     var cv = document.getElementById('myCanvas');
     var ctx = cv.getContext('2d');
@@ -65,8 +68,9 @@
       return new_board_render;
     }
 
-    function move_head(head) {
-      var dir = Math.floor(Math.random() * 4);
+    function move_head(snake, snakes, foods) {
+      var head = snake.body[0];
+      var dir = snake.policy(snake, snakes, foods);
       var xx = head[0];
       var yy = head[1];
       if (dir == 0) {return [(L + xx - 1) % L, yy];}
@@ -82,8 +86,6 @@
       var y = head_coord[1];
       other_snakes.forEach(function(other_snake) {
         other_snake.body.forEach(function(crd) {
-          // console.log(crd, other_snake.color, color);
-          // if (crd[0] == x && crd[1] == y && other_snakes.color != color) {
           if (crd[0] == x && crd[1] == y && other_snake.color != color) {
             cur_snake_crash = true;
           }
@@ -118,7 +120,7 @@
       var foods = foods;
       snakes.forEach(function(snake) {
         var snake_head = snake.body[0];
-        var new_head = move_head(snake_head);
+        var new_head = move_head(snake, snakes, foods);
         var new_body = []
         new_body[0] = new_head;
         for (i = 1; i < 10; i++) { 
@@ -141,7 +143,8 @@
         if (!cur_snake_crash) {
           new_snakes.push({color : snake.color, 
                            body : new_body, hp : snake.hp - 1,
-                           max_score : Math.max(snake.max_score, snake.hp)});
+                           max_score : Math.max(snake.max_score, snake.hp),
+                           policy : snake.policy });
         } else {
           snake.body.forEach(function(bb) {
             var bbx = bb[0];
@@ -163,13 +166,47 @@
     });
 
     function getRandomColor() {
-      // ignoring color E and F here, we'll use those for food
+      // ignoring color E and F here, well use those for food
       var letters = '456789ABCD';
       var color = '#';
       for (var i = 0; i < 6; i++) {
         color += letters[Math.floor(Math.random() * 10)];
       }
       return color;
+    }
+
+    function randomV(lenn) {
+      var ret = [];
+      for (i = 0; i < lenn; i++) {
+        ret.push(2 * Math.random() - 1.0);
+      }
+      return ret;
+    }
+
+    function randomPolicy() {
+      // for each input in sliding window, 4 possible values:
+      // empty, self, enemy, food
+      var lenn = W * W * 4;
+      var weight0 = randomV(lenn);
+      var weight1 = randomV(lenn);
+      var weight2 = randomV(lenn);
+      var weight3 = randomV(lenn);
+      var weights = [weight0, weight1, weight2, weight3];
+      return Policy(weights);
+    }
+
+    function Policy(weights) {
+      function policy(snake, snakes, foods) {
+        var sl_window = sliding_window(snake, snakes, foods);
+        var dir0_str = dotprod(weights[0], sl_window);
+        var dir1_str = dotprod(weights[1], sl_window);
+        var dir2_str = dotprod(weights[2], sl_window);
+        var dir3_str = dotprod(weights[3], sl_window);
+        var dir = Math.floor(Math.random() * 4);
+        var dir = soft_arg_max(dir0_str, dir1_str, dir2_str, dir3_str);
+        return dir;
+      }
+      return policy;
     }
 
     function spawnSnek() {
@@ -185,6 +222,7 @@
                    [rand_x, rand_y], [rand_x, rand_y]],
            hp : 100,
            max_score : 0,
+           policy : randomPolicy(),
           }
       );
     }
@@ -208,7 +246,6 @@
       var max_score = 0;
       snakes.forEach(function(snake) {
         max_score = Math.max(max_score, snake.max_score);
-        // console.log(snake.hp);
       });
       document.getElementById('hiscore').innerHTML = max_score;
     }
@@ -249,6 +286,140 @@
 
     }
     animate();
+
+
+  // HALPERS =========================================================
+  function dotprod(x,y){
+    var ret = 0.0;
+    for (i = 0; i < x.length; i++) {
+      ret += x[i] * y[i];
+    }
+    return ret;
+  }
+
+  function soft_arg_max(a,b,c,d) {
+    var aa = Math.exp(a);
+    var bb = Math.exp(b);
+    var cc = Math.exp(c);
+    var dd = Math.exp(d);
+
+    var total = aa + bb + cc + dd;
+    var prob_a = aa / total;
+    var prob_b = bb / total;
+    var prob_c = cc / total;
+    var prob_d = dd / total;
+    var probabilities = [prob_a, prob_b, prob_c, prob_d];
+    var disc = SJS.Discrete(probabilities);
+    return disc.draw(); 
+  }
+
+  // augment a coordinate for the sliding window on a torus
+  function aug(x,y) {
+    var ret = [[x,y],
+               [x-L,y-L],
+               [x-L,y+0],
+               [x-L,y+L],
+               [x+0,y-L],
+               [x+0,y+0],
+               [x+0,y+L],
+               [x+L,y-L],
+               [x+L,y+0],
+               [x+L,y+L],
+               ];
+    return ret;
+  }
+
+  // coordinate transform in aug torus space to sliding window
+  // return [x, y] if has transform, return [] if there is no transform
+  function win_xform(Ox, Oy, x, y) {
+    // sliding window bounds
+    var x_l = Ox - 2;
+    var x_u = Ox + 2;
+    var y_l = Oy - 2;
+    var y_u = Oy + 2;
+
+    var aug_xy = aug(x,y);
+    var ret = [];
+    aug_xy.forEach(function(xy) {
+      aug_x = xy[0];
+      aug_y = xy[1];
+      if (x_l <= aug_x && aug_x <= x_u && y_l <= aug_y && aug_y <= y_u) {
+        ret.push(aug_x - Ox + 2);
+        ret.push(aug_y - Oy + 2);
+      }
+    });
+    return ret ;
+  }
+
+  // get the sliding window of the snake head and put into a feature space
+  function sliding_window(snake, snakes, foods) {
+    var Ox = snake.body[0][0];
+    var Oy = snake.body[0][1];
+
+    var matrix = [];
+    for(var i=0; i<5; i++) {
+      matrix[i] = new Array(5);
+    }
+    // add the foods
+    foods.forEach(function(food) {
+      var fxfy = win_xform(Ox, Oy, food.position[0], food.position[1]);
+      if (fxfy.length > 0) {
+        var fx = fxfy[0];
+        var fy = fxfy[1];
+        matrix[fx][fy] = 1;
+      }
+    });
+    // add the enemies
+    snakes.forEach(function(other_snake){
+      other_snake.body.forEach(function(seg) {
+        var fxfy = win_xform(Ox, Oy, seg[0], seg[1]);
+        if (fxfy.length > 0) {
+          var fx = fxfy[0];
+          var fy = fxfy[1];
+          matrix[fx][fy] = 2;
+        }
+      });
+    });
+    // add the selfs
+    snake.body.forEach(function(selfseg) {
+      var fxfy = win_xform(Ox, Oy, selfseg[0], selfseg[1]);
+      if (fxfy.length > 0) {
+        var fx = fxfy[0];
+        var fy = fxfy[1];
+        matrix[fx][fy] = 3;
+      }
+    });
+
+    var transformed_mat = new Array(5 * 5 * 4);
+    for (ii = 0; ii < 5 * 5 * 4; ii++) {
+      transformed_mat[ii] = 0.0;
+    }
+    for(var i=0; i<5; i++) {
+      for(var j=0; j<5; j++) {
+        transformed_mat[i * 5 * 4 + j * 4 + matrix[i][j]] = 1.0;
+      }
+    }
+    return transformed_mat;
+  }
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
   </script>
