@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+  <body>
+
+  <canvas id="myCanvas" width="800" height="800"
+  style="border:1px solid #d3d3d3;">
+  Your browser does not support the canvas element.
+  </canvas>
+
+  <script>
+
+    var L = 80;
+
+    var cv = document.getElementById('myCanvas');
+    var ctx = cv.getContext('2d');
+    var cvWidth = cv.width;
+    var cvHeight = cv.height;
+
+    var cur_snake_crash = false;
+
+    function draw_DDD(ctx, args) {
+      var x = args[0];
+      var y = args[1];
+      var c = args[2];
+      ctx.beginPath();
+      ctx.fillStyle = c;
+      ctx.fillRect(x*10, y*10, 10, 10)
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    // the board rendering of snakes
+    var board_render = [
+    ];
+
+    // a snake is a list of coordinates of length 10
+    var snakes = [
+      //[[L, L, "red"]]
+    ];
+
+    function snakes_to_board () {
+      board_render = [];
+      snakes.forEach(function(snake) {
+        var colr = snake.color;
+        snake.body.forEach(function(coord) {
+        board_render.push([coord[0], coord[1], colr])
+        });
+      });
+    }
+
+    function move_head(head) {
+      var dir = Math.floor(Math.random() * 4);
+      var xx = head[0];
+      var yy = head[1];
+      if (dir == 0) {return [(L + xx - 1) % L, yy];}
+      if (dir == 1) {return [(L + xx + 1) % L, yy];}
+      if (dir == 2) {return [xx, (L + yy - 1) % L];}
+      if (dir == 3) {return [xx, (L + yy + 1) % L];}
+    }
+
+    // check if a snake has crashed BibleThump
+    function crash(color, coord, other_snakes){
+      var x = coord[0];
+      var y = coord[1];
+      other_snakes.forEach(function(other_snake) {
+        other_snake.body.forEach(function(crd) {
+          // console.log(crd, other_snake.color, color);
+          // if (crd[0] == x && crd[1] == y && other_snakes.color != color) {
+          if (crd[0] == x && crd[1] == y && other_snake.color != color) {
+            cur_snake_crash = true;
+        }
+        });
+      });
+    }
+
+    function update_snakes(snakes) {
+      var new_snakes = [];
+      snakes.forEach(function(snake) {
+        var snake_head = snake.body[0];
+        var new_head = move_head(snake_head);
+        var new_body = []
+        new_body[0] = new_head;
+        for (i = 1; i < 10; i++) { 
+          new_body[i] = snake.body[i-1];
+        }
+        cur_snake_crash = false;
+        crash(snake.color, new_head, snakes);
+        if (!cur_snake_crash) {
+          new_snakes.push({color : snake.color, body : new_body});
+        }
+      });
+      return new_snakes
+    }
+
+    // animation : always running loop.
+    function animate() {
+      setTimeout(function (){
+          // call again next time we can draw
+          requestAnimationFrame(animate);
+
+          // RENDER
+          ctx.clearRect(0, 0, cvWidth, cvHeight);
+          board_render.forEach(function(o) {
+            draw_DDD(ctx, o)
+          });
+
+          // UPDATE
+          snakes_to_board();
+          snakes = update_snakes(snakes);
+
+          // SPAWN IF LESS THAN DISRED AMOUNT
+          if (snakes.length < 20) {
+            spawnSnek();
+          }
+      }, 100);
+
+    }
+    animate();
+
+    // click handler to add random rects
+    window.addEventListener('click', function(e) {
+      console.log(e.clientX);
+      console.log(e.clientY);
+      spawnSnek();
+    });
+
+    function getRandomColor() {
+      // ignoring color E and F here, we'll use those for food
+      var letters = '0123456789ABCD';
+      var color = '#';
+      for (var i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 14)];
+      }
+      return color;
+    }
+
+    function spawnSnek() {
+      var randColor = getRandomColor();
+      var rand_x = Math.floor(Math.random() * L);
+      var rand_y = Math.floor(Math.random() * L);
+      snakes.push(
+          {color : randColor,
+           body : [[rand_x, rand_y], [rand_x, rand_y], 
+                   [rand_x, rand_y], [rand_x, rand_y], 
+                   [rand_x, rand_y], [rand_x, rand_y], 
+                   [rand_x, rand_y], [rand_x, rand_y], 
+                   [rand_x, rand_y], [rand_x, rand_y]]
+          }
+      );
+    }
+
+    // var intervalID = window.setInterval(function() {
+    //     addRandRect(100,100)
+
+    //     }, 200);
+
+  </script>
+
+  </body>
+</html>
+
