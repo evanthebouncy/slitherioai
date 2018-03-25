@@ -2,14 +2,26 @@
 <html>
   <body>
 
-  <canvas id="myCanvas" width="800" height="800"
-  style="border:1px solid #d3d3d3;">
-  Your browser does not support the canvas element.
-  </canvas>
+    <canvas id="myCanvas" width="800" height="800"
+    style="border:1px solid #d3d3d3;">
+    Your browser does not support the canvas element.
+    </canvas>
+
+    <div id="hiscore">
+      STUFF GOES HERE ?
+    </div>
 
   <script>
 
+  // GAME RULE:
+  // just like slither.io if you crash yo head you die die
+  // each snake starts out with  100 hp
+  // each move takes 1 point
+  // each food grants 10 hp
+  // you also die die if hp reach 0 as well
+
     var L = 80;
+    var FOOD_HP = 10;
 
     var cv = document.getElementById('myCanvas');
     var ctx = cv.getContext('2d');
@@ -34,18 +46,23 @@
     ];
 
     // a snake is a list of coordinates of length 10
-    var snakes = [
-      //[[L, L, "red"]]
-    ];
+    var snakes = [];
+    // a food is a list of coordinates of all food on the board
+    var foods = [];
 
-    function snakes_to_board () {
-      board_render = [];
+    function to_board (snakes, foods) {
+      var new_board_render = [];
       snakes.forEach(function(snake) {
         var colr = snake.color;
         snake.body.forEach(function(coord) {
-        board_render.push([coord[0], coord[1], colr])
+        new_board_render.push([coord[0], coord[1], colr])
         });
       });
+      foods.forEach(function(food) {
+        var colr = food.color;
+        new_board_render.push([food.position[0], food.position[1], colr])
+      });
+      return new_board_render;
     }
 
     function move_head(head) {
@@ -59,22 +76,46 @@
     }
 
     // check if a snake has crashed BibleThump
-    function crash(color, coord, other_snakes){
-      var x = coord[0];
-      var y = coord[1];
+    function crash(snake, head_coord, other_snakes){
+      var color = snake.color;
+      var x = head_coord[0];
+      var y = head_coord[1];
       other_snakes.forEach(function(other_snake) {
         other_snake.body.forEach(function(crd) {
           // console.log(crd, other_snake.color, color);
           // if (crd[0] == x && crd[1] == y && other_snakes.color != color) {
           if (crd[0] == x && crd[1] == y && other_snake.color != color) {
             cur_snake_crash = true;
-        }
+          }
+          if (snake.hp < 0) {
+            cur_snake_crash = true;
+          }
         });
       });
     }
 
-    function update_snakes(snakes) {
+    // makek the snake eat the food and return new list of food
+    function eat_food(head_coord, foods) {
+      new_foods = [];
+      var x = head_coord[0];
+      var y = head_coord[1];
+      foods.forEach(function(food) {
+        var pos = food.position;
+        if (pos[0] == x && pos[1] == y) {
+          1;
+        } else {
+          new_foods.push(food);
+        }
+      });
+      return new_foods;
+    }
+
+    // takes in the current state of snakes and foods
+    // produces the next state of snakes and foods
+    function update(snakes, foods) {
       var new_snakes = [];
+      // we need to update multiple rounds of eating food
+      var foods = foods;
       snakes.forEach(function(snake) {
         var snake_head = snake.body[0];
         var new_head = move_head(snake_head);
@@ -83,39 +124,36 @@
         for (i = 1; i < 10; i++) { 
           new_body[i] = snake.body[i-1];
         }
-        cur_snake_crash = false;
-        crash(snake.color, new_head, snakes);
-        if (!cur_snake_crash) {
-          new_snakes.push({color : snake.color, body : new_body});
+
+        // SNEK HAS EATEN FOOD PogChamp
+        cur_snake_eat = false;
+        // the eat_food function modifies the f
+        new_foods = eat_food(new_head, foods);
+        if (new_foods.length < foods.length) {
+          foods = new_foods;
+          snake.hp = snake.hp + FOOD_HP;
         }
-      });
-      return new_snakes
-    }
 
-    // animation : always running loop.
-    function animate() {
-      setTimeout(function (){
-          // call again next time we can draw
-          requestAnimationFrame(animate);
 
-          // RENDER
-          ctx.clearRect(0, 0, cvWidth, cvHeight);
-          board_render.forEach(function(o) {
-            draw_DDD(ctx, o)
+        // SNEK HAS CRASH AND DED BibleThump
+        cur_snake_crash = false;
+        crash(snake, new_head, snakes);
+        if (!cur_snake_crash) {
+          new_snakes.push({color : snake.color, 
+                           body : new_body, hp : snake.hp - 1,
+                           max_score : Math.max(snake.max_score, snake.hp)});
+        } else {
+          snake.body.forEach(function(bb) {
+            var bbx = bb[0];
+            var bby = bb[1];
+            spawnFood(bbx,bby);
           });
+        }
 
-          // UPDATE
-          snakes_to_board();
-          snakes = update_snakes(snakes);
 
-          // SPAWN IF LESS THAN DISRED AMOUNT
-          if (snakes.length < 20) {
-            spawnSnek();
-          }
-      }, 100);
-
+      });
+      return [new_snakes, foods];
     }
-    animate();
 
     // click handler to add random rects
     window.addEventListener('click', function(e) {
@@ -126,10 +164,10 @@
 
     function getRandomColor() {
       // ignoring color E and F here, we'll use those for food
-      var letters = '0123456789ABCD';
+      var letters = '456789ABCD';
       var color = '#';
       for (var i = 0; i < 6; i++) {
-        color += letters[Math.floor(Math.random() * 14)];
+        color += letters[Math.floor(Math.random() * 10)];
       }
       return color;
     }
@@ -144,15 +182,74 @@
                    [rand_x, rand_y], [rand_x, rand_y], 
                    [rand_x, rand_y], [rand_x, rand_y], 
                    [rand_x, rand_y], [rand_x, rand_y], 
-                   [rand_x, rand_y], [rand_x, rand_y]]
+                   [rand_x, rand_y], [rand_x, rand_y]],
+           hp : 100,
+           max_score : 0,
           }
       );
     }
 
-    // var intervalID = window.setInterval(function() {
-    //     addRandRect(100,100)
+    function spawnFood(x, y) {
+      var randColor = "#000000"
+      foods.push(
+        {color : randColor,
+         position : [x, y],
+        }
+      );
+    }
 
-    //     }, 200);
+    function spawnRandFood() {
+      var rand_x = Math.floor(Math.random() * L);
+      var rand_y = Math.floor(Math.random() * L);
+      spawnFood(rand_x, rand_y);
+    }
+
+    function show_leaderboard() {
+      var max_score = 0;
+      snakes.forEach(function(snake) {
+        max_score = Math.max(max_score, snake.max_score);
+        // console.log(snake.hp);
+      });
+      document.getElementById('hiscore').innerHTML = max_score;
+    }
+
+    // THE MAIN GAME LOOP ==========================
+    // animation : always running loop.
+    function animate() {
+      setTimeout(function (){
+          // call again next time we can draw
+          requestAnimationFrame(animate);
+
+          // RENDER BOARD
+          ctx.clearRect(0, 0, cvWidth, cvHeight);
+          board_render.forEach(function(o) {
+            draw_DDD(ctx, o)
+          });
+
+          // UPDATE
+          // update takes in old snakes, old foods
+          // and produce new snakes and new foods
+          var snakes_foods = update(snakes, foods);
+          snakes = snakes_foods[0];
+          foods = snakes_foods[1];
+          
+          board_render = to_board(snakes, foods);
+
+          // SPAWN IF LESS THAN DISRED AMOUNT
+          if (snakes.length < 20) {
+            spawnSnek();
+          }
+          if (foods.length < 50) {
+            spawnRandFood();
+          }
+
+          // UPDATE LEADER BOARD
+          show_leaderboard();
+      }, 100);
+
+    }
+    animate();
+
 
   </script>
 
