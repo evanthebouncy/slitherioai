@@ -2,13 +2,27 @@
 <html>
   <body>
 
-    <canvas id="myCanvas" width="800" height="800"
-    style="border:1px solid #d3d3d3;">
-    Your browser does not support the canvas element.
-    </canvas>
+    <div>
 
-    <div id="hiscore">
-      STUFF GOES HERE ?
+      <span style="float: left">
+        <canvas id="myCanvas" width="800" height="800"
+        style="border:1px solid #d3d3d3;">
+        Your browser does not support the canvas element.
+        </canvas>
+      </span>
+
+      <span style="float: right">
+        <div id="hititle"> current high schore </div>
+        <div id="hiscore">
+          STUFF GOES HERE ?
+        </div>
+
+        <div id="allhititle"> all time high schore </div>
+        <div id="allhi">
+          STUFF GOES HERE ?
+        </div>
+      </span>
+
     </div>
 
   <script src="discrete.js"></script>
@@ -44,15 +58,19 @@
       ctx.closePath();
     }
 
+    // ======================= S T U F F S ======================= //
     // the board rendering of snakes
     var board_render = [
     ];
-
     // a snake is a list of coordinates of length 10
     var snakes = [];
     // a food is a list of coordinates of all food on the board
     var foods = [];
 
+    var best_weight = [randomV(W*W*4), randomV(W*W*4),randomV(W*W*4), randomV(W*W*4)];
+    var best_score = 0;
+
+    // ========================= F U N C T I O N S ====================
     function to_board (snakes, foods) {
       var new_board_render = [];
       snakes.forEach(function(snake) {
@@ -70,7 +88,7 @@
 
     function move_head(snake, snakes, foods) {
       var head = snake.body[0];
-      var dir = snake.policy(snake, snakes, foods);
+      var dir = snake.policy[0](snake, snakes, foods);
       var xx = head[0];
       var yy = head[1];
       if (dir == 0) {return [(L + xx - 1) % L, yy];}
@@ -183,6 +201,26 @@
       return ret;
     }
 
+    function perturb_weight(w) {
+      var ret = [];
+      for (i = 0; i < w.length; i++){
+        ret.push(w[i] + Math.random() * 0.05);
+      }
+      return ret;
+    }
+
+    function getNewPolicy() {
+      if (Math.random() < 0.5){
+        return randomPolicy();
+      } else {
+        var new_weights = [perturb_weight(best_weight[0]),
+                           perturb_weight(best_weight[1]),
+                           perturb_weight(best_weight[2]),
+                           perturb_weight(best_weight[3])];
+        return [Policy(new_weights), new_weights];
+      }
+    }
+
     function randomPolicy() {
       // for each input in sliding window, 4 possible values:
       // empty, self, enemy, food
@@ -192,7 +230,7 @@
       var weight2 = randomV(lenn);
       var weight3 = randomV(lenn);
       var weights = [weight0, weight1, weight2, weight3];
-      return Policy(weights);
+      return [Policy(weights), weights];
     }
 
     function Policy(weights) {
@@ -222,7 +260,7 @@
                    [rand_x, rand_y], [rand_x, rand_y]],
            hp : 100,
            max_score : 0,
-           policy : randomPolicy(),
+           policy : getNewPolicy(),
           }
       );
     }
@@ -242,12 +280,42 @@
       spawnFood(rand_x, rand_y);
     }
 
+    // Calculate the leader board
     function show_leaderboard() {
-      var max_score = 0;
+
+      var div = document.getElementById("hititle");
+      div.style.fontSize = "xx-large";
+      div.innerHTML = "Current High Score";
+
+      var div = document.getElementById("allhititle");
+      div.style.fontSize = "xx-large";
+      div.innerHTML = "ALL TIME High Score";
+      
+      document.getElementById("hiscore").innerHTML="";
       snakes.forEach(function(snake) {
-        max_score = Math.max(max_score, snake.max_score);
+        var div = document.createElement("div");
+        div.style.fontSize = "xx-large";
+        div.innerHTML = snake.max_score;
+        div.style.color = snake.color;
+        document.getElementById("hiscore").appendChild(div);
       });
-      document.getElementById('hiscore').innerHTML = max_score;
+
+      var div = document.getElementById("allhi");
+      div.style.fontSize = "xx-large";
+      div.innerHTML = best_score;
+    }
+
+    // update the best weight
+    function update_best_weight() {
+      snakes.forEach(function(snake) {
+        if (snake.max_score > best_score) {
+          console.log("NEW CHAMPION!");
+          best_weight = snake.policy[1];
+          best_score = snake.max_score;
+          console.log(best_score);
+          console.log(best_weight);
+        }
+      });
     }
 
     // THE MAIN GAME LOOP ==========================
@@ -282,6 +350,9 @@
 
           // UPDATE LEADER BOARD
           show_leaderboard();
+
+          // UPDATE NEW CHAMPION
+          update_best_weight();
       }, 100);
 
     }
@@ -401,25 +472,6 @@
     }
     return transformed_mat;
   }
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
   </script>
