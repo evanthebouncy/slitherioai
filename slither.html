@@ -37,15 +37,14 @@
 
     var L = 80;
     var FOOD_HP = 10;
+    var START_HP = 50;
     // window size
-    var W = 5;
+    var W = 3;
 
     var cv = document.getElementById('myCanvas');
     var ctx = cv.getContext('2d');
     var cvWidth = cv.width;
     var cvHeight = cv.height;
-
-    var cur_snake_crash = false;
 
     function draw_DDD(ctx, args) {
       var x = args[0];
@@ -67,8 +66,11 @@
     // a food is a list of coordinates of all food on the board
     var foods = [];
 
-    var best_weight = [randomV(W*W*4), randomV(W*W*4),randomV(W*W*4), randomV(W*W*4)];
-    var best_score = 0;
+    var best_weights = [];
+    for (var j = 0; j < 5; j++){
+      best_weights.push([0,
+                        [randomV(W*W*4), randomV(W*W*4),randomV(W*W*4), randomV(W*W*4)]]);
+    };
 
     // ========================= F U N C T I O N S ====================
     function to_board (snakes, foods) {
@@ -102,6 +104,7 @@
       var color = snake.color;
       var x = head_coord[0];
       var y = head_coord[1];
+      var cur_snake_crash = false;
       other_snakes.forEach(function(other_snake) {
         other_snake.body.forEach(function(crd) {
           if (crd[0] == x && crd[1] == y && other_snake.color != color) {
@@ -112,18 +115,18 @@
           }
         });
       });
+
+      return cur_snake_crash;
     }
 
     // makek the snake eat the food and return new list of food
     function eat_food(head_coord, foods) {
-      new_foods = [];
+      var new_foods = [];
       var x = head_coord[0];
       var y = head_coord[1];
       foods.forEach(function(food) {
         var pos = food.position;
-        if (pos[0] == x && pos[1] == y) {
-          1;
-        } else {
+        if (!(pos[0] == x && pos[1] == y)) {
           new_foods.push(food);
         }
       });
@@ -146,28 +149,25 @@
         }
 
         // SNEK HAS EATEN FOOD PogChamp
-        cur_snake_eat = false;
-        // the eat_food function modifies the f
-        new_foods = eat_food(new_head, foods);
+        var new_foods = eat_food(new_head, foods);
         if (new_foods.length < foods.length) {
           foods = new_foods;
           snake.hp = snake.hp + FOOD_HP;
+          snake.max_score = snake.max_score + 1;
         }
 
-
         // SNEK HAS CRASH AND DED BibleThump
-        cur_snake_crash = false;
-        crash(snake, new_head, snakes);
+        var cur_snake_crash = crash(snake, new_head, snakes);
         if (!cur_snake_crash) {
           new_snakes.push({color : snake.color, 
                            body : new_body, hp : snake.hp - 1,
-                           max_score : Math.max(snake.max_score, snake.hp),
+                           max_score : snake.max_score,
                            policy : snake.policy });
         } else {
           snake.body.forEach(function(bb) {
             var bbx = bb[0];
             var bby = bb[1];
-            spawnFood(bbx,bby);
+            foods = spawnFood(foods, bbx,bby);
           });
         }
 
@@ -204,15 +204,16 @@
     function perturb_weight(w) {
       var ret = [];
       for (i = 0; i < w.length; i++){
-        ret.push(w[i] + Math.random() * 0.05);
+        ret.push(w[i] + Math.random() * 0.5);
       }
       return ret;
     }
 
     function getNewPolicy() {
-      if (Math.random() < 0.5){
+      if (Math.random() < 0.1){
         return randomPolicy();
       } else {
+        var best_weight = best_weights[0][1];
         var new_weights = [perturb_weight(best_weight[0]),
                            perturb_weight(best_weight[1]),
                            perturb_weight(best_weight[2]),
@@ -258,62 +259,36 @@
                    [rand_x, rand_y], [rand_x, rand_y], 
                    [rand_x, rand_y], [rand_x, rand_y], 
                    [rand_x, rand_y], [rand_x, rand_y]],
-           hp : 100,
+           hp : START_HP,
            max_score : 0,
            policy : getNewPolicy(),
           }
       );
     }
 
-    function spawnFood(x, y) {
+    function spawnFood(foods, x, y) {
       var randColor = "#000000"
       foods.push(
         {color : randColor,
          position : [x, y],
         }
       );
+      return foods;
     }
 
     function spawnRandFood() {
       var rand_x = Math.floor(Math.random() * L);
       var rand_y = Math.floor(Math.random() * L);
-      spawnFood(rand_x, rand_y);
-    }
-
-    // Calculate the leader board
-    function show_leaderboard() {
-
-      var div = document.getElementById("hititle");
-      div.style.fontSize = "xx-large";
-      div.innerHTML = "Current High Score";
-
-      var div = document.getElementById("allhititle");
-      div.style.fontSize = "xx-large";
-      div.innerHTML = "ALL TIME High Score";
-      
-      document.getElementById("hiscore").innerHTML="";
-      snakes.forEach(function(snake) {
-        var div = document.createElement("div");
-        div.style.fontSize = "xx-large";
-        div.innerHTML = snake.max_score;
-        div.style.color = snake.color;
-        document.getElementById("hiscore").appendChild(div);
-      });
-
-      var div = document.getElementById("allhi");
-      div.style.fontSize = "xx-large";
-      div.innerHTML = best_score;
+      spawnFood(foods, rand_x, rand_y);
     }
 
     // update the best weight
     function update_best_weight() {
       snakes.forEach(function(snake) {
+        var best_score = best_weights[0][0];
         if (snake.max_score > best_score) {
           console.log("NEW CHAMPION!");
-          best_weight = snake.policy[1];
-          best_score = snake.max_score;
-          console.log(best_score);
-          console.log(best_weight);
+          best_weights[0] = [snake.max_score, snake.policy[1]];
         }
       });
     }
@@ -404,10 +379,11 @@
   // return [x, y] if has transform, return [] if there is no transform
   function win_xform(Ox, Oy, x, y) {
     // sliding window bounds
-    var x_l = Ox - 2;
-    var x_u = Ox + 2;
-    var y_l = Oy - 2;
-    var y_u = Oy + 2;
+    var halfW = Math.floor(W/2);
+    var x_l = Ox - halfW;
+    var x_u = Ox + halfW;
+    var y_l = Oy - halfW;
+    var y_u = Oy + halfW;
 
     var aug_xy = aug(x,y);
     var ret = [];
@@ -415,8 +391,8 @@
       aug_x = xy[0];
       aug_y = xy[1];
       if (x_l <= aug_x && aug_x <= x_u && y_l <= aug_y && aug_y <= y_u) {
-        ret.push(aug_x - Ox + 2);
-        ret.push(aug_y - Oy + 2);
+        ret.push(aug_x - Ox + halfW);
+        ret.push(aug_y - Oy + halfW);
       }
     });
     return ret ;
@@ -428,8 +404,8 @@
     var Oy = snake.body[0][1];
 
     var matrix = [];
-    for(var i=0; i<5; i++) {
-      matrix[i] = new Array(5);
+    for(var i=0; i<W; i++) {
+      matrix[i] = new Array(W);
     }
     // add the foods
     foods.forEach(function(food) {
@@ -461,17 +437,44 @@
       }
     });
 
-    var transformed_mat = new Array(5 * 5 * 4);
-    for (ii = 0; ii < 5 * 5 * 4; ii++) {
+    var transformed_mat = new Array(W * W * 4);
+    for (ii = 0; ii < W * W * 4; ii++) {
       transformed_mat[ii] = 0.0;
     }
-    for(var i=0; i<5; i++) {
-      for(var j=0; j<5; j++) {
-        transformed_mat[i * 5 * 4 + j * 4 + matrix[i][j]] = 1.0;
+    for(var i=0; i<W; i++) {
+      for(var j=0; j<W; j++) {
+        transformed_mat[i * W * 4 + j * 4 + matrix[i][j]] = 1.0;
       }
     }
     return transformed_mat;
   }
+
+  // Calculate the leader board
+  function show_leaderboard() {
+
+    var div = document.getElementById("hititle");
+    div.style.fontSize = "xx-large";
+    div.innerHTML = "Current High Score";
+
+    var div = document.getElementById("allhititle");
+    div.style.fontSize = "xx-large";
+    div.innerHTML = "ALL TIME High Score";
+    
+    document.getElementById("hiscore").innerHTML="";
+    snakes.forEach(function(snake) {
+      var div = document.createElement("div");
+      div.style.fontSize = "xx-large";
+      div.innerHTML = snake.max_score;
+      // div.innerHTML = snake.hp;
+      div.style.color = snake.color;
+      document.getElementById("hiscore").appendChild(div);
+    });
+
+    var div = document.getElementById("allhi");
+    div.style.fontSize = "xx-large";
+    div.innerHTML = best_weights[0][0];
+  }
+
 
 
   </script>
