@@ -284,6 +284,7 @@
 
     // update the best weight
     function update_best_weight() {
+      best_weights[0][0] -= 0.01
       snakes.forEach(function(snake) {
         var best_score = best_weights[0][0];
         if (snake.max_score > best_score) {
