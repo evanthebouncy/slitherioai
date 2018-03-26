@@ -204,7 +204,7 @@
     function perturb_weight(w) {
       var ret = [];
       for (i = 0; i < w.length; i++){
-        ret.push(w[i] + Math.random() * 0.5);
+        ret.push(w[i] + Math.random() * 0.01);
       }
       return ret;
     }
@@ -319,8 +319,11 @@
           if (snakes.length < 20) {
             spawnSnek();
           }
-          if (foods.length < 50) {
+          if (foods.length < 0.05 * L * L) {
             spawnRandFood();
+          }
+          if (foods.length > 0.06 * L * L) {
+            foods = foods.slice(1);
           }
 
           // UPDATE LEADER BOARD
