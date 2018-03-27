@@ -36,10 +36,10 @@
   // you also die die if hp reach 0 as well
 
     var L = 80;
-    var FOOD_HP = 10;
+    var FOOD_HP = 20;
     var START_HP = 50;
     // window size
-    var W = 3;
+    var W = 5;
 
     var cv = document.getElementById('myCanvas');
     var ctx = cv.getContext('2d');
@@ -110,7 +110,7 @@
           if (crd[0] == x && crd[1] == y && other_snake.color != color) {
             cur_snake_crash = true;
           }
-          if (snake.hp < 0) {
+          if (snake.hp <= 0) {
             cur_snake_crash = true;
           }
         });
@@ -237,13 +237,14 @@
     function Policy(weights) {
       function policy(snake, snakes, foods) {
         var sl_window = sliding_window(snake, snakes, foods);
-        // console.log(sl_window);
+        console.log(sl_window);
         var dir0_str = dotprod(sl_window, weights[0]);
         var dir1_str = dotprod(sl_window, weights[1]);
         var dir2_str = dotprod(sl_window, weights[2]);
         var dir3_str = dotprod(sl_window, weights[3]);
-        var dir = Math.floor(Math.random() * 4);
-        var dir = soft_arg_max(dir0_str, dir1_str, dir2_str, dir3_str);
+        // var dir = Math.floor(Math.random() * 4);
+        // var dir = soft_arg_max(dir0_str, dir1_str, dir2_str, dir3_str);
+        var dir = arg_max(dir0_str, dir1_str, dir2_str, dir3_str);
         return dir;
       }
       return policy;
@@ -321,10 +322,10 @@
           if (snakes.length < 20) {
             spawnSnek();
           }
-          if (foods.length < 0.02 * L * L) {
+          if (foods.length < 0.00 * L * L) {
             spawnRandFood();
           }
-          if (foods.length > 0.03 * L * L) {
+          if (foods.length > 0.1 * L * L) {
             foods = foods.slice(1);
           }
 
@@ -333,7 +334,7 @@
 
           // UPDATE NEW CHAMPION
           update_best_weight();
-      }, 100);
+      }, 10);
 
     }
     animate();
@@ -346,6 +347,22 @@
       ret += x[i] * y[i];
     }
     return ret;
+  }
+
+  function arg_max(a,b,c,d) {
+    var maxxx = Math.max(a,b,c,d);
+    if (maxxx == a) {
+      return 0;
+    }
+    if (maxxx == b) {
+      return 1;
+    }
+    if (maxxx == c) {
+      return 2;
+    }
+    if (maxxx == d) {
+      return 3;
+    }
   }
 
   function soft_arg_max(a,b,c,d) {
@@ -407,7 +424,7 @@
 
     var diffx = min_x - headx;
     var diffy = min_y - heady;
-    var totall = Math.abs(diffx) + Math.abs(diffy) + 1;
+    var totall = Math.abs(diffx) + Math.abs(diffy) + 0.1;
     return [diffx / totall, diffy / totall];
   }
 
@@ -482,7 +499,8 @@
         transformed_mat[i * W * 4 + j * 4 + matrix[i][j]] = 1.0;
       }
     }
-    var food_vect = nearest_food([Ox, Oy], foods)
+    var food_vect = nearest_food([Ox, Oy], foods);
+    // return food_vect;
     return transformed_mat.concat(food_vect);
   }
 
