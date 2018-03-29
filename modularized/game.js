@@ -154,6 +154,8 @@ function update(snakes, foods) {
       foods = new_foods;
       snake.hp = snake.hp + FOOD_HP;
       snake.max_score = snake.max_score + 1;
+      // bonus team score
+      TeamScore[snake.team_id] += 1;
     }
 
     // SNEK DED ?! monkaS
@@ -219,31 +221,16 @@ function spawnRandFood() {
   spawnFood(foods, rand_x, rand_y);
 }
 
-// // Calculate the leader board
-// function show_leaderboard() {
-// 
-//   var div = document.getElementById("hititle");
-//   div.style.fontSize = "xx-large";
-//   div.innerHTML = "Current High Score";
-// 
-//   var div = document.getElementById("allhititle");
-//   div.style.fontSize = "xx-large";
-//   div.innerHTML = "ALL TIME High Score";
-//   
-//   document.getElementById("hiscore").innerHTML="";
-//   snakes.forEach(function(snake) {
-//     var div = document.createElement("div");
-//     div.style.fontSize = "xx-large";
-//     div.innerHTML = String(snake.max_score) + " (" + String(snake.hp) + ")";
-//     // div.innerHTML = snake.hp;
-//     div.style.color = snake.color;
-//     document.getElementById("hiscore").appendChild(div);
-//   });
-// 
-//   var div = document.getElementById("allhi");
-//   div.style.fontSize = "xx-large";
-//   div.innerHTML = best_weights[0][0];
-// }
+// Calculate the leader board
+function show_leaderboard() {
+  var div = document.getElementById("allhititle");
+  div.style.fontSize = "xx-large";
+  div.innerHTML = "TEAM SCORES";
+  
+  var div = document.getElementById("allhi");
+  div.style.fontSize = "xx-large";
+  div.innerHTML = String(TeamScore);
+}
 
 // ------------------------------ GAME LOOP -------------------------------
 // animation : always running loop.
@@ -285,7 +272,7 @@ function animate() {
     }
 
     // UPDATE LEADER BOARD
-    // show_leaderboard();
+    show_leaderboard();
 
     // evolve the snakes for each team
     for (var t_id = 0; t_id < N_TEAMS; t_id++){
