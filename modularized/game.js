@@ -22,7 +22,7 @@ var START_HP = 50;
 // how much lose per turn
 var HP_LOSS = 1;
 // spawn food pellet when total food on the board falls below this
-var PASSIVE_FOOD_RATIO = 0.0;
+var PASSIVE_FOOD_RATIO = 0.02;
 // simulation frame rate
 var SIM_FR = 10;
 // how long a snake is
