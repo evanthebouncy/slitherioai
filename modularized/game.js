@@ -25,6 +25,10 @@ var HP_LOSS = 1;
 var PASSIVE_FOOD_RATIO = 0.0;
 // simulation frame rate
 var SIM_FR = 10;
+// how long a snake is
+var SNEK_L = 10;
+// how many snake per team
+var N_SNEKS = 10;
 
 // -------------------------- GAME STATES ---------------------------
 // a list of snakes, each snake contains:
@@ -42,6 +46,8 @@ var board_render = [];
 // --------------------------- RENDERING ----------------------------
 var cv = document.getElementById('myCanvas');
 var ctx = cv.getContext('2d');
+cv.width = 10 * L;
+cv.height = 10 * L;
 var cvWidth = cv.width;
 var cvHeight = cv.height;
 
@@ -133,7 +139,7 @@ function update(snakes, foods) {
     var new_head = move_head(snake, snakes, foods);
     var new_body = []
     new_body[0] = new_head;
-    for (i = 1; i < 10; i++) { 
+    for (i = 1; i < SNEK_L; i++) { 
       new_body[i] = snake.body[i-1];
     }
     snake.body = new_body
@@ -177,21 +183,23 @@ function getRandomColor() {
   return color;
 }
 
-function spawnSnek() {
+// spawn a snake for team team_id
+function spawnSnek(team_id) {
   var randColor = getRandomColor();
   var rand_x = Math.floor(Math.random() * L);
   var rand_y = Math.floor(Math.random() * L);
+  var body = [];
+  for (var ii = 0; ii < SNEK_L; ii++){
+    body.push([rand_x, rand_y]);
+  }
   snakes.push(
-      {color : randColor,
-       body : [[rand_x, rand_y], [rand_x, rand_y], 
-               [rand_x, rand_y], [rand_x, rand_y], 
-               [rand_x, rand_y], [rand_x, rand_y], 
-               [rand_x, rand_y], [rand_x, rand_y], 
-               [rand_x, rand_y], [rand_x, rand_y]],
-       hp : START_HP,
-       max_score : 0,
-       policy : getNewPolicy(),
-      }
+     {color : randColor,
+      body : body,
+      hp : START_HP,
+      max_score : 0,
+      team_id : team_id,   
+      policy : getNewPolicy(team_id),
+     }
   );
 }
 
@@ -209,18 +217,6 @@ function spawnRandFood() {
   var rand_x = Math.floor(Math.random() * L);
   var rand_y = Math.floor(Math.random() * L);
   spawnFood(foods, rand_x, rand_y);
-}
-
-// update the best weight
-function update_best_weight() {
-  best_weights[0][0] -= 0.01
-  snakes.forEach(function(snake) {
-    var best_score = best_weights[0][0];
-    if (snake.max_score > best_score) {
-      console.log("NEW CHAMPION!");
-      best_weights[0] = [snake.max_score, snake.policy[1]];
-    }
-  });
 }
 
 // // Calculate the leader board
@@ -272,8 +268,17 @@ function animate() {
     board_render = to_board(snakes, foods);
 
     // SPAWN IF LESS THAN DISRED AMOUNT
-    if (snakes.length < 20) {
-      spawnSnek();
+    // spawn snakes for each team
+    for (var t_id = 0; t_id < N_TEAMS; t_id++){
+      var team_n_snek = 0;
+      snakes.forEach(function(snek) {
+        if(snek.team_id == t_id){
+          team_n_snek += 1;
+        }
+      });
+      if (team_n_snek < N_SNEKS) {
+        spawnSnek(t_id);
+      }
     }
     if (foods.length < PASSIVE_FOOD_RATIO * L * L) {
       spawnRandFood();
@@ -282,11 +287,18 @@ function animate() {
     // UPDATE LEADER BOARD
     // show_leaderboard();
 
-    // UPDATE NEW CHAMPION
-    update_best_weight();
+    // evolve the snakes for each team
+    for (var t_id = 0; t_id < N_TEAMS; t_id++){
+      var team_sneks = [];
+      snakes.forEach(function(snek) {
+        if(snek.team_id == t_id){
+          team_sneks.push(snek);
+        }
+      });
+      evolve(t_id, team_sneks);
+    }
   }, SIM_FR);
 }
 
 animate();
-// agent.js
 
