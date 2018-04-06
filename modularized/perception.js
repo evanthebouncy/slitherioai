@@ -125,7 +125,8 @@ function perceive(snake, snakes, foods) {
     }
   }
   var food_vect = nearest_food([Ox, Oy], foods);
-  // return food_vect;
-  return transformed_mat.concat(food_vect);
+  // return the snake's local perception, plus food vector, plus hunger level
+  var hunger = 1.0 / (snake.hp / 100 + 1.0)
+  return transformed_mat.concat(food_vect).concat(hunger);
 }
 

@@ -3,7 +3,7 @@
 // only top 1 gene is kept. it's pretty hacky
 function BaseLineAgent() {
 
-  var best_weight=[randomV(W*W*4+2), randomV(W*W*4+2),randomV(W*W*4+2), randomV(W*W*4+2)];
+  var best_weight=[randomV(W*W*4+3), randomV(W*W*4+3),randomV(W*W*4+3), randomV(W*W*4+3)];
   var best_score = 0;
 
   function randomV(lenn) {
@@ -37,7 +37,7 @@ function BaseLineAgent() {
   function randomPolicy() {
     // for each input in sliding window, 4 possible values:
     // empty, self, enemy, food
-    var lenn = W * W * 4 + 2;
+    var lenn = W * W * 4 + 3;
     var weight0 = randomV(lenn);
     var weight1 = randomV(lenn);
     var weight2 = randomV(lenn);
