@@ -29,6 +29,8 @@ var SIM_FR = 10;
 var SNEK_L = 10;
 // how many snake per team
 var N_SNEKS = 10;
+// animate ?
+var RENDER = true;
 
 // -------------------------- GAME STATES ---------------------------
 // a list of snakes, each snake contains:
@@ -240,10 +242,12 @@ function animate() {
     requestAnimationFrame(animate);
 
     // RENDER BOARD
-    ctx.clearRect(0, 0, cvWidth, cvHeight);
-    board_render.forEach(function(o) {
-      draw_coord(ctx, o)
-    });
+    if (RENDER) {
+      ctx.clearRect(0, 0, cvWidth, cvHeight);
+      board_render.forEach(function(o) {
+        draw_coord(ctx, o)
+      });
+    }
 
     // UPDATE
     // update takes in old snakes, old foods
@@ -286,6 +290,26 @@ function animate() {
     }
   }, SIM_FR);
 }
+
+// add in toggle speed and render buttons
+document.getElementById('toggle_render').onclick = function() {
+  if (RENDER) {
+    RENDER = false;
+    SIM_FR = 0; 
+  } else {
+    RENDER = true;
+    SIM_FR = 10;
+  }
+};
+
+document.getElementById('toggle_speed').onclick = function() {
+  if (SIM_FR < 100) {
+    SIM_FR = SIM_FR + 20
+  } else {
+    SIM_FR = 1;
+  }
+};
+
 
 animate();
 
