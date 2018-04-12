@@ -40,6 +40,8 @@
     var START_HP = 50;
     // window size
     var W = 5;
+    var N_GENES = 2;
+    var DECAY_SCORE = 0.01;
 
     var cv = document.getElementById('myCanvas');
     var ctx = cv.getContext('2d');
@@ -67,9 +69,9 @@
     var foods = [];
 
     var best_weights = [];
-    for (var j = 0; j < 5; j++){
+    for (var j = 0; j < N_GENES; j++){
       best_weights.push([0,
-                        [randomV(W*W*4+2), randomV(W*W*4+2),randomV(W*W*4+2), randomV(W*W*4+2)]]);
+                        [randomV(W*W*4+3), randomV(W*W*4+3),randomV(W*W*4+3), randomV(W*W*4+3)]]);
     };
 
     // ========================= F U N C T I O N S ====================
@@ -162,7 +164,8 @@
           new_snakes.push({color : snake.color, 
                            body : new_body, hp : snake.hp - 1,
                            max_score : snake.max_score,
-                           policy : snake.policy });
+                           policy : snake.policy,
+                           gene_id : snake.gene_id});
         } else {
           snake.body.forEach(function(bb) {
             var bbx = bb[0];
@@ -209,11 +212,11 @@
       return ret;
     }
 
-    function getNewPolicy() {
+    function getNewPolicy(gene_id) {
       if (Math.random() < 0.1){
         return randomPolicy();
       } else {
-        var best_weight = best_weights[0][1];
+        var best_weight = best_weights[gene_id][1];
         var new_weights = [perturb_weight(best_weight[0]),
                            perturb_weight(best_weight[1]),
                            perturb_weight(best_weight[2]),
@@ -225,7 +228,7 @@
     function randomPolicy() {
       // for each input in sliding window, 4 possible values:
       // empty, self, enemy, food
-      var lenn = W * W * 4 + 2;
+      var lenn = W * W * 4 + 3;
       var weight0 = randomV(lenn);
       var weight1 = randomV(lenn);
       var weight2 = randomV(lenn);
@@ -237,7 +240,6 @@
     function Policy(weights) {
       function policy(snake, snakes, foods) {
         var sl_window = sliding_window(snake, snakes, foods);
-        console.log(sl_window);
         var dir0_str = dotprod(sl_window, weights[0]);
         var dir1_str = dotprod(sl_window, weights[1]);
         var dir2_str = dotprod(sl_window, weights[2]);
@@ -254,6 +256,7 @@
       var randColor = getRandomColor();
       var rand_x = Math.floor(Math.random() * L);
       var rand_y = Math.floor(Math.random() * L);
+      var g_id = Math.floor(Math.random() * N_GENES);
       snakes.push(
           {color : randColor,
            body : [[rand_x, rand_y], [rand_x, rand_y], 
@@ -263,7 +266,8 @@
                    [rand_x, rand_y], [rand_x, rand_y]],
            hp : START_HP,
            max_score : 0,
-           policy : getNewPolicy(),
+           gene_id : g_id, 
+           policy : getNewPolicy(g_id),
           }
       );
     }
@@ -284,14 +288,19 @@
       spawnFood(foods, rand_x, rand_y);
     }
 
-    // update the best weight
+    // update the best weight(s)
     function update_best_weight() {
-      best_weights[0][0] -= 0.01
+
+      for (var ii = 0; ii < N_GENES; ii++) {
+        best_weights[ii][0] -= DECAY_SCORE;
+      }
+
       snakes.forEach(function(snake) {
-        var best_score = best_weights[0][0];
-        if (snake.max_score > best_score) {
-          console.log("NEW CHAMPION!");
-          best_weights[0] = [snake.max_score, snake.policy[1]];
+        var gene_id = snake.gene_id;
+        console.log(gene_id);
+        console.log(best_weights[gene_id]);
+        if (snake.max_score > best_weights[gene_id][0]) {
+          best_weights[gene_id] = [snake.max_score, snake.policy[1]];
         }
       });
     }
@@ -325,16 +334,12 @@
           if (foods.length < 0.00 * L * L) {
             spawnRandFood();
           }
-          if (foods.length > 0.1 * L * L) {
-            foods = foods.slice(1);
-          }
-
           // UPDATE LEADER BOARD
           show_leaderboard();
 
           // UPDATE NEW CHAMPION
           update_best_weight();
-      }, 40);
+      }, 10);
 
     }
     animate();
@@ -501,7 +506,7 @@
     }
     var food_vect = nearest_food([Ox, Oy], foods);
     // return food_vect;
-    return transformed_mat.concat(food_vect);
+    return transformed_mat.concat(food_vect).concat([1.0 / (snake.hp + 1)]);
   }
 
   // Calculate the leader board
@@ -527,7 +532,11 @@
 
     var div = document.getElementById("allhi");
     div.style.fontSize = "xx-large";
-    div.innerHTML = best_weights[0][0];
+    var all_time = " ";
+    for (var iii = 0; iii < N_GENES; iii ++) {
+      all_time += String(Math.floor(best_weights[iii][0])) + " " ;
+    }
+    div.innerHTML = all_time;
   }
 
 
