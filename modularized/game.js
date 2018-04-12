@@ -53,6 +53,11 @@ cv.height = 10 * L;
 var cvWidth = cv.width;
 var cvHeight = cv.height;
 
+var team_colors = [];
+for (var i = 0; i < 100; i++){
+  team_colors.push(getRandomColor());
+}
+
 // a coord is a list of (x, y, color)
 function draw_coord(ctx, coord) {
   var x = coord[0];
@@ -99,14 +104,14 @@ function move_head(snake, snakes, foods) {
 
 // check if a snake has deaded BibleThump
 function dead(snake, head_coord, other_snakes){
-  var color = snake.color;
+  var id = snake.id;
   var x = head_coord[0];
   var y = head_coord[1];
   var cur_snake_dead = false;
   other_snakes.forEach(function(other_snake) {
-    // other snake is different if it has different color
+    // other snake is different if it has different id 
     other_snake.body.forEach(function(crd) {
-      if (crd[0] == x && crd[1] == y && other_snake.color != color) {
+      if (crd[0] == x && crd[1] == y && other_snake.id != id) {
         cur_snake_dead = true;
       }
       if (snake.hp <= 0) {
@@ -189,7 +194,8 @@ function getRandomColor() {
 
 // spawn a snake for team team_id
 function spawnSnek(team_id) {
-  var randColor = getRandomColor();
+  var randID = getRandomColor();
+  var randColor = team_colors[team_id];
   var rand_x = Math.floor(Math.random() * L);
   var rand_y = Math.floor(Math.random() * L);
   var body = [];
@@ -197,7 +203,8 @@ function spawnSnek(team_id) {
     body.push([rand_x, rand_y]);
   }
   snakes.push(
-     {color : randColor,
+     {id : randID,
+      color : randColor,
       body : body,
       hp : START_HP,
       max_score : 0,
